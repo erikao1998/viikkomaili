@@ -53,15 +53,12 @@ for x in tulevat_tapahtumat_split:
     if "Kahvitus" not in x:
         new_tt = new_tt + x
 
-
-
-new_text = "Viikon ohjelma:\n\nEi tapahtumia tällä viikolla :(\n\n- - -\n\n"
-
-
+new_text = ""
 for i in range(len(splitted_text) - 1):
     new_text = new_text + splitted_text[i]
 
-# The next line is commented because it is used only if there are no upcoming events in the week (if this line is used, one must comment two previous lines of code).
+# The next two line is commented because it is used only if there are no upcoming events in the week (if this line is used, one must comment three previous lines of code).
+# new_text = "Viikon ohjelma:\n\nEi tapahtumia tällä viikolla :(\n\n- - -\n\n"
 # new_text = new_text + new_tt
 
 week_number = generate_weeknumber()
