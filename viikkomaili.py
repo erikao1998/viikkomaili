@@ -4,10 +4,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import datetime
 from urllib.request import urlopen
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 from dotenv import load_dotenv
 from os import getenv
+import requests
+from bs4 import BeautifulSoup
 
 load_dotenv()
 wp_password = getenv("PASSWORD")
@@ -15,23 +15,7 @@ wp_username = getenv("USER_NAME")
 sender_email = getenv("SENDER_EMAIL")
 receiver_email = getenv("RECEIVER_EMAIL")
 email_password = getenv("EMAIL_PASSWORD")
-url = getenv("URL")
-
-def extract_data_from_webpage():
-    driver = webdriver.Firefox()
-    driver.get(url)
-    u = driver.find_element_by_id("user_login")
-    u.send_keys(wp_username)
-    p = driver.find_element_by_id("user_pass")
-    p.send_keys(wp_password)
-
-    button = driver.find_element_by_id("wp-submit")
-    button.click()
-
-    element = driver.find_element_by_xpath("//pre")
-    message = element.text
-    driver.quit()
-    return message
+viikkomaili_url = getenv("URL")
 
 def generate_weeknumber():
     x = datetime.datetime.now()
@@ -45,7 +29,18 @@ def generate_weeknumber():
 port = 465
 smtp_server = "smtp.gmail.com"
 
-text = extract_data_from_webpage()
+session = requests.session()
+
+url = "https://www.etelasuomalainenosakunta.fi/wp-login.php"
+cookies = {"wordpress_test_cookie": "WP%20Cookie%20check"}
+data = {"log": wp_username, "pwd": wp_password, "wp-submit": "Kirjaudu sis\xc3\xa4\xc3\xa4n", "redirect_to": "https://www.etelasuomalainenosakunta.fi/wp-admin/", "testcookie": "1"}
+session.post(url, cookies=cookies, data=data)
+
+page = session.get(viikkomaili_url)
+soup = BeautifulSoup(page.text, 'html.parser')
+t = soup.pre
+
+text = t.contents[0]
 splitted_text = text.split("* * *")
 tulevat_tapahtumat_split = splitted_text[3].split("- - -")
 new_tt = ""
