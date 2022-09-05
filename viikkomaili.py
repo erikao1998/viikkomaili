@@ -1,21 +1,9 @@
 
-import smtplib, ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import datetime
 from urllib.request import urlopen
-from dotenv import load_dotenv
-from os import getenv
 import requests
 from bs4 import BeautifulSoup
-
-load_dotenv()
-wp_password = getenv("PASSWORD")
-wp_username = getenv("USER_NAME")
-sender_email = getenv("SENDER_EMAIL")
-receiver_email = getenv("RECEIVER_EMAIL")
-email_password = getenv("EMAIL_PASSWORD")
-viikkomaili_url = getenv("URL")
+from datetime import date
 
 def generate_weeknumber():
     x = datetime.datetime.now()
@@ -26,54 +14,14 @@ def generate_weeknumber():
     week = datetime.date(year, month, day).isocalendar()[1]
     return week + 1
 
-port = 465
-smtp_server = "smtp.gmail.com"
 
-session = requests.session()
+url = "https://etelasuomalainenosakunta.fi/tapahtumakalenteri/"
+page = requests.get(url)
+soup = BeautifulSoup(page.content, 'html.parser')
+times = soup.find_all("span", class_="tribe-event-date-start")
+titles = soup.find_all('a', class_="tribe-events-calendar-list__event-title-link tribe-common-anchor-thin")
 
-url = "https://www.etelasuomalainenosakunta.fi/wp-login.php"
-cookies = {"wordpress_test_cookie": "WP%20Cookie%20check"}
-data = {"log": wp_username, "pwd": wp_password, "wp-submit": "Kirjaudu sis\xc3\xa4\xc3\xa4n", "redirect_to": "https://www.etelasuomalainenosakunta.fi/wp-admin/", "testcookie": "1"}
-session.post(url, cookies=cookies, data=data)
+t = [(time.get_text(), title.get_text().strip()) for time, title in zip(times, titles)]
 
-page = session.get(viikkomaili_url)
-soup = BeautifulSoup(page.text, 'html.parser')
-t = soup.pre
+print(t)
 
-text = t.contents[0]
-splitted_text = text.split("* * *")
-tulevat_tapahtumat_split = splitted_text[3].split("- - -")
-new_tt = ""
-counter = 0
-for x in tulevat_tapahtumat_split:
-
-    if counter > 3:
-        break
-    if "Kahvitus" not in x:
-        new_tt = new_tt + x
-        counter += 1
-
-# The next line is commented because it is used only if there are no upcoming events in the week (if this line is used, one must comment lines 64-66).
-# new_text = "Viikon ohjelma:\n\nEi tapahtumia tällä viikolla :(\n\n- - -\n\n"
-
-new_text = ""
-for i in range(len(splitted_text) - 1):
-    new_text = new_text + splitted_text[i]
-
-new_text = new_text + new_tt
-
-week_number = generate_weeknumber()
-
-message = """\
-Subject: Osakunnan tapahtumat viikolla {}
-
-{}
-""".format(week_number, new_text)
-
-encoded_message = message.encode("utf-8")
-
-context = ssl.create_default_context()
-with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-    server.login(sender_email, email_password)
-    server.sendmail(sender_email, receiver_email, encoded_message)
-    print("Viesti lähetetty!")
